@@ -9,9 +9,11 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -27,6 +29,8 @@ import me.lukas81298.bungeecloud.network.PacketDataReader;
 import me.lukas81298.bungeecloud.network.PacketDataWriter;
 import me.lukas81298.bungeecloud.network.packets.PacketAuth;
 import me.lukas81298.bungeecloud.network.packets.PacketLoginSuccess;
+import me.lukas81298.bungeecloud.network.packets.PacketServerStatus;
+import me.lukas81298.bungeecloud.network.packets.PacketSetServerOffline;
 import me.lukas81298.bungeecloud.network.packets.PacketStartServer;
 
 public class HostInstance extends Thread {
@@ -41,11 +45,11 @@ public class HostInstance extends Thread {
     private PacketRegistry packetRegistry = new PacketRegistry();
     private int portCounter = 25590;
     private Map<UUID, Server> servers = Maps.newConcurrentMap();
-    
+
     public Map<UUID, Server> getServers() {
 	return this.servers;
     }
-    
+
     public static void main(String[] args) {
 	instance = new HostInstance();
     }
@@ -122,7 +126,8 @@ public class HostInstance extends Thread {
     public void run() {
 	try {
 	    while (!socket.isClosed() && socket.isConnected()) {
-		if(this.input.available() == 0) continue;
+		if (this.input.available() == 0)
+		    continue;
 		int rawLength = this.input.readInt();
 		int packetId = this.input.readByte();
 		int packetDataLength = rawLength - 1;
@@ -139,15 +144,15 @@ public class HostInstance extends Thread {
 		if (packet.getPacketId() == 0x00) {
 		    throw new IllegalStateException("Wrong packet direction");
 		}
-		if(packet.getPacketId() == 0x01) {
+		if (packet.getPacketId() == 0x01) {
 		    PacketLoginSuccess p = (PacketLoginSuccess) packet;
 		    System.out.println("Authentification success: " + (System.currentTimeMillis() - p.systemTime) + "ms");
 		}
-		if(packet.getPacketId() == 0x02) {
+		if (packet.getPacketId() == 0x02) {
 		    PacketStartServer s = (PacketStartServer) packet;
 		    System.out.println("Starting server " + s.uuid + " with " + s.slots + " slots, " + s.memory + "Mib memory and gamemode " + s.gamemode);
 		    this.startServer(s.uuid, s.gamemode, s.slots, s.memory);
-		} 
+		}
 	    }
 	} catch (IOException e) {
 	    e.printStackTrace();
@@ -156,29 +161,50 @@ public class HostInstance extends Thread {
 	}
 
     }
-    
+
     public void startServer(final UUID uuid, final String gamemode, final int slots, final int memory) {
 	Thread t = new Thread(new Runnable() {
-	    
+
 	    @Override
 	    public void run() {
-		String string = properties.getProperty("server-directory");
-		File directory = new File(string + gamemode);
-		List<String> commands = Arrays.asList(System.getProperty("java.home") + "\\bin\\java", "-Xmx" + memory + "M", "-Xms" + memory + "M", "-jar", string + gamemode + "\\spigot-1.8.7.jar");
+		String string = properties.getProperty("server-directory").replace("/", "\\");
+		File directory = new File(string + "\\" +  gamemode);
+		List<String> commands = new LinkedList<>();
+		commands.add(System.getProperty("java.home"));
+		commands.add("\\bin\\java");
+		commands.add("-Xmx" + memory + "M");
+		commands.add("-Xms" + memory + "M");
+		commands.add("-jar");
+		commands.add(string + "\\" + gamemode + "\\spigot-1.8.7.jar");
 		fillSettings(slots, commands);
 		ProcessBuilder pb = new ProcessBuilder(commands);
+		pb.environment().put("server-uuid", uuid.toString());
 		pb.directory(directory);
 		try {
-		   Process process = pb.start();
-		   Server server = new Server(uuid, process, memory, slots, gamemode);
-		   servers.put(uuid, server);
-		   
+		    Process process = pb.start();
+		    sendPacket(new PacketServerStatus(uuid, 0, 0));
+		    Server server = new Server(uuid, process, memory, slots, gamemode);
+		    servers.put(uuid, server);
+		    process.waitFor();
+		    PacketSetServerOffline packet = new PacketSetServerOffline(server.getUuid());
+		    sendPacket(packet);
+		    System.out.println("Server " + uuid + " went offline.");
 		} catch (IOException e) {
+		    e.printStackTrace();
+		} catch (InterruptedException e) {
 		    e.printStackTrace();
 		}
 	    }
 	});
 	t.start();
+    }
+
+    public void sendConsoleCommand(UUID uuid, String command) {
+	Server server = servers.get(uuid);
+	if (server == null) {
+	    return;
+	}
+	System.out.println("Executing command '" + command + "' on server " + uuid);
     }
 
     public synchronized void sendPacket(NetworkPacket packet) throws IOException {
@@ -197,7 +223,7 @@ public class HostInstance extends Thread {
 
     private void fillSettings(final int slots, List<String> commands) {
 	commands.add("-p");
-	commands.add(Integer.toString(portCounter ++));
+	commands.add(Integer.toString(portCounter++));
 	commands.add("-s");
 	commands.add(Integer.toString(slots));
 	commands.add("-o");

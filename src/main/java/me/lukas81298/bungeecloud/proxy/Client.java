@@ -14,6 +14,8 @@ import me.lukas81298.bungeecloud.network.PacketDataReader;
 import me.lukas81298.bungeecloud.network.PacketDataWriter;
 import me.lukas81298.bungeecloud.network.packets.PacketAuth;
 import me.lukas81298.bungeecloud.network.packets.PacketLoginSuccess;
+import me.lukas81298.bungeecloud.network.packets.PacketServerStatus;
+import me.lukas81298.bungeecloud.network.packets.PacketSetServerOffline;
 import me.lukas81298.bungeecloud.network.packets.PacketStartServer;
 
 public class Client extends Thread {
@@ -87,6 +89,12 @@ public class Client extends Thread {
 			socket.close();
 			System.out.println("Wrong credentials!");
 		    }
+		} else if(packet.getPacketId() == 0x03) {
+		    PacketServerStatus s = (PacketServerStatus) packet;
+		    System.out.println("Update Server Status " + s.uuid + ": " + s.playerCount + " " + s.state);
+		} else if(packet.getPacketId() == 0x04) {
+		    PacketSetServerOffline s = (PacketSetServerOffline) packet;
+		    System.out.println("Server " + s.uuid + " went offline.");
 		}
 	    }
 	} catch (Exception ex) {

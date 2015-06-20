@@ -6,6 +6,9 @@ import me.lukas81298.bungeecloud.network.NetworkPacket;
 import me.lukas81298.bungeecloud.network.PacketDataReader;
 import me.lukas81298.bungeecloud.network.packets.PacketAuth;
 import me.lukas81298.bungeecloud.network.packets.PacketLoginSuccess;
+import me.lukas81298.bungeecloud.network.packets.PacketServerStatus;
+import me.lukas81298.bungeecloud.network.packets.PacketSetServerOffline;
+import me.lukas81298.bungeecloud.network.packets.PacketStartServer;
 
 import com.google.common.collect.Maps;
 
@@ -16,6 +19,9 @@ public class PacketRegistry {
     public PacketRegistry() {
 	this.registerPacket(0x00, PacketAuth.class);
 	this.registerPacket(0x01, PacketLoginSuccess.class);
+	this.registerPacket(0x02, PacketStartServer.class);
+	this.registerPacket(0x03, PacketServerStatus.class);
+	this.registerPacket(0x04, PacketSetServerOffline.class);
     }
     
     public void registerPacket(int packetId, Class<? extends NetworkPacket> clazz) {

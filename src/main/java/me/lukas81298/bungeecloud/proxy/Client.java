@@ -7,14 +7,14 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 
-import org.apache.commons.codec.net.BCodec;
-
 import me.lukas81298.bungeecloud.InstanceType;
+import me.lukas81298.bungeecloud.UUIDCounter;
 import me.lukas81298.bungeecloud.network.NetworkPacket;
 import me.lukas81298.bungeecloud.network.PacketDataReader;
 import me.lukas81298.bungeecloud.network.PacketDataWriter;
 import me.lukas81298.bungeecloud.network.packets.PacketAuth;
 import me.lukas81298.bungeecloud.network.packets.PacketLoginSuccess;
+import me.lukas81298.bungeecloud.network.packets.PacketStartServer;
 
 public class Client extends Thread {
 
@@ -82,6 +82,7 @@ public class Client extends Thread {
 			this.instanceType = auth.getType();
 			sendPacket(new PacketLoginSuccess(System.currentTimeMillis()));
 			System.out.println("auth success");
+			sendPacket(new PacketStartServer("testgamemode", 20, 512, UUIDCounter.nextUUID()));
 		    }else {
 			socket.close();
 			System.out.println("Wrong credentials!");

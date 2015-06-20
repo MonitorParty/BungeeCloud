@@ -10,7 +10,14 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Properties;
+import java.util.UUID;
+
+import com.google.common.collect.Maps;
 
 import me.lukas81298.bungeecloud.Credentials;
 import me.lukas81298.bungeecloud.InstanceType;
@@ -20,6 +27,7 @@ import me.lukas81298.bungeecloud.network.PacketDataReader;
 import me.lukas81298.bungeecloud.network.PacketDataWriter;
 import me.lukas81298.bungeecloud.network.packets.PacketAuth;
 import me.lukas81298.bungeecloud.network.packets.PacketLoginSuccess;
+import me.lukas81298.bungeecloud.network.packets.PacketStartServer;
 
 public class HostInstance extends Thread {
 
@@ -31,7 +39,13 @@ public class HostInstance extends Thread {
     private DataOutputStream output;
     private static HostInstance instance;
     private PacketRegistry packetRegistry = new PacketRegistry();
-
+    private int portCounter = 25590;
+    private Map<UUID, Server> servers = Maps.newConcurrentMap();
+    
+    public Map<UUID, Server> getServers() {
+	return this.servers;
+    }
+    
     public static void main(String[] args) {
 	instance = new HostInstance();
     }
@@ -86,6 +100,7 @@ public class HostInstance extends Thread {
 	} else {
 	    this.properties.setProperty("host", "127.0.0.1");
 	    this.properties.setProperty("port", "22567");
+	    this.properties.setProperty("server-directory", "D:\\Projects\\BungeeCloud\\spigot-server\\");
 	    this.configFile.createNewFile();
 	    this.properties.store(new FileOutputStream(this.configFile), "Config File. This file can be edited!");
 	}
@@ -128,6 +143,11 @@ public class HostInstance extends Thread {
 		    PacketLoginSuccess p = (PacketLoginSuccess) packet;
 		    System.out.println("Authentification success: " + (System.currentTimeMillis() - p.systemTime) + "ms");
 		}
+		if(packet.getPacketId() == 0x02) {
+		    PacketStartServer s = (PacketStartServer) packet;
+		    System.out.println("Starting server " + s.uuid + " with " + s.slots + " slots, " + s.memory + "Mib memory and gamemode " + s.gamemode);
+		    this.startServer(s.uuid, s.gamemode, s.slots, s.memory);
+		} 
 	    }
 	} catch (IOException e) {
 	    e.printStackTrace();
@@ -135,6 +155,30 @@ public class HostInstance extends Thread {
 	    e.printStackTrace();
 	}
 
+    }
+    
+    public void startServer(final UUID uuid, final String gamemode, final int slots, final int memory) {
+	Thread t = new Thread(new Runnable() {
+	    
+	    @Override
+	    public void run() {
+		String string = properties.getProperty("server-directory");
+		File directory = new File(string + gamemode);
+		List<String> commands = Arrays.asList(System.getProperty("java.home") + "\\bin\\java", "-Xmx" + memory + "M", "-Xms" + memory + "M", "-jar", string + gamemode + "\\spigot-1.8.7.jar");
+		fillSettings(slots, commands);
+		ProcessBuilder pb = new ProcessBuilder(commands);
+		pb.directory(directory);
+		try {
+		   Process process = pb.start();
+		   Server server = new Server(uuid, process, memory, slots, gamemode);
+		   servers.put(uuid, server);
+		   
+		} catch (IOException e) {
+		    e.printStackTrace();
+		}
+	    }
+	});
+	t.start();
     }
 
     public synchronized void sendPacket(NetworkPacket packet) throws IOException {
@@ -149,5 +193,15 @@ public class HostInstance extends Thread {
 								// length
 	this.output.write(buffer.toByteArray()); // write packet id + data
 						 // to the stream
+    }
+
+    private void fillSettings(final int slots, List<String> commands) {
+	commands.add("-p");
+	commands.add(Integer.toString(portCounter ++));
+	commands.add("-s");
+	commands.add(Integer.toString(slots));
+	commands.add("-o");
+	commands.add("false");
+	commands.add("--nojline");
     }
 }

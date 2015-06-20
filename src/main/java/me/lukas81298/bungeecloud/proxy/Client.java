@@ -7,6 +7,8 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 
+import org.apache.commons.codec.net.BCodec;
+
 import me.lukas81298.bungeecloud.InstanceType;
 import me.lukas81298.bungeecloud.network.NetworkPacket;
 import me.lukas81298.bungeecloud.network.PacketDataReader;
@@ -28,7 +30,6 @@ public class Client extends Thread {
 	this.socket = socket;
 	this.inputStream = new DataInputStream(this.socket.getInputStream());
 	this.outputStream = new DataOutputStream(this.socket.getOutputStream());
-	this.start();
     }
 
     public InstanceType getInstanceType() {
@@ -59,9 +60,10 @@ public class Client extends Thread {
     public void run() {
 	try {
 	    while (!socket.isClosed() && socket.isConnected()) {
+		if(this.inputStream.available() == 0) continue;
 		int rawLength = this.inputStream.readInt();
 		int packetId = this.inputStream.readByte();
-		int packetDataLength = rawLength - Integer.SIZE;
+		int packetDataLength = rawLength - 1;
 		if (packetDataLength <= 0)
 		    return;
 		byte[] packetData = new byte[packetDataLength];
@@ -72,12 +74,14 @@ public class Client extends Thread {
 		    System.out.println("[BungeeCloud] Invalid packet id " + packetId);
 		    continue;
 		}
+		System.out.println(packet.getClass().getName());
 		if(packet.getPacketId() == 0x00) {
 		    PacketAuth auth = (PacketAuth) packet;
-		    if(getServer().getBungeeCloud().getCredentials() == auth.getCredentials()) {
+		    if(checkCredentials(auth.getCredentials())) {
 			authed = true;
 			this.instanceType = auth.getType();
 			sendPacket(new PacketLoginSuccess(System.currentTimeMillis()));
+			System.out.println("auth success");
 		    }else {
 			socket.close();
 			System.out.println("Wrong credentials!");
@@ -92,6 +96,19 @@ public class Client extends Thread {
 		e.printStackTrace();
 	    }
 	}
+    }
+    
+    public boolean checkCredentials(byte[] b) {
+	byte[] c = this.server.getBungeeCloud().getCredentials();
+	if(b.length != c.length) {
+	    return false;
+	}
+	for(int i = 0; i < c.length; i++) {
+	    if(b[i] != c[i]) {
+		return false;
+	    }
+	}
+	return true;
     }
 
     public synchronized void sendPacket(NetworkPacket packet) throws IOException {

@@ -8,7 +8,7 @@ import me.lukas81298.bungeecloud.network.PacketDataWriter;
 
 public class PacketLoginSuccess implements NetworkPacket {
 
-    private long systemTime;
+    public long systemTime;
     
     public PacketLoginSuccess(long time) {
 	this.systemTime = time;

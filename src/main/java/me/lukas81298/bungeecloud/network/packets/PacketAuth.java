@@ -32,7 +32,7 @@ public class PacketAuth implements NetworkPacket {
 
     @Override
     public void readPacketData(PacketDataReader r) throws IOException {
-	this.type = InstanceType.values()[r.readInt() + 1];
+	this.type = InstanceType.values()[r.readInt() - 1];
 	this.credentials = r.readByteArray();
     }
 

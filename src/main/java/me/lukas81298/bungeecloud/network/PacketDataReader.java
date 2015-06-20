@@ -19,7 +19,6 @@ public class PacketDataReader {
     
     public byte[] readByteArray() throws IOException {
 	int i = readInt();
-	
 	byte[] array = new byte[i];
 	for(int c = 0; c < array.length; c++) {
 	    array[c] = this.readByte();

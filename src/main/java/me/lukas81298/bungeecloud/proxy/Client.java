@@ -5,18 +5,23 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.util.Map.Entry;
+import java.util.UUID;
 
 import me.lukas81298.bungeecloud.InstanceType;
-import me.lukas81298.bungeecloud.UUIDCounter;
 import me.lukas81298.bungeecloud.network.NetworkPacket;
 import me.lukas81298.bungeecloud.network.PacketDataReader;
 import me.lukas81298.bungeecloud.network.PacketDataWriter;
 import me.lukas81298.bungeecloud.network.packets.PacketAuth;
+import me.lukas81298.bungeecloud.network.packets.PacketInitServer;
 import me.lukas81298.bungeecloud.network.packets.PacketLoginSuccess;
 import me.lukas81298.bungeecloud.network.packets.PacketServerStatus;
 import me.lukas81298.bungeecloud.network.packets.PacketSetServerOffline;
-import me.lukas81298.bungeecloud.network.packets.PacketStartServer;
+import net.md_5.bungee.BungeeCord;
+import net.md_5.bungee.api.config.ServerInfo;
+import net.md_5.bungee.api.connection.ProxiedPlayer;
 
 public class Client extends Thread {
 
@@ -83,8 +88,9 @@ public class Client extends Thread {
 			authed = true;
 			this.instanceType = auth.getType();
 			sendPacket(new PacketLoginSuccess(System.currentTimeMillis()));
+			System.out.println("Type: " + this.instanceType);
 			System.out.println("auth success");
-			sendPacket(new PacketStartServer("testgamemode", 20, 512, UUIDCounter.nextUUID()));
+		//	sendPacket(new PacketStartServer("testgamemode", 20, 512, UUIDCounter.nextUUID()));
 		    }else {
 			socket.close();
 			System.out.println("Wrong credentials!");
@@ -92,12 +98,24 @@ public class Client extends Thread {
 		} else if(packet.getPacketId() == 0x03) {
 		    PacketServerStatus s = (PacketServerStatus) packet;
 		    System.out.println("Update Server Status " + s.uuid + ": " + s.playerCount + " " + s.state);
+		    for(Entry<ProxiedPlayer, UUID> entry : BungeeCloud.instance.waitingForServer.entrySet()) {
+			if(entry.getValue().equals(s.uuid)) {
+			    System.out.println("connecting " + entry.getKey().getName() + " to " + s.uuid);
+			    entry.getKey().connect(BungeeCord.getInstance().getServerInfo(s.uuid.toString()));
+			}
+		    }
 		} else if(packet.getPacketId() == 0x04) {
 		    PacketSetServerOffline s = (PacketSetServerOffline) packet;
 		    System.out.println("Server " + s.uuid + " went offline.");
+		} else if(packet.getPacketId() == 0x05) {
+		    PacketInitServer s = (PacketInitServer) packet;
+		    ServerInfo info = BungeeCord.getInstance().constructServerInfo(s.serverUUID.toString(), new InetSocketAddress(s.address, s.port), s.gameMode, false);
+		    BungeeCord.getInstance().getServers().put(s.serverUUID.toString(), info);
+		   
 		}
 	    }
 	} catch (Exception ex) {
+	    server.getClients().remove(this);
 	    ex.printStackTrace();
 	    try {
 		this.socket.close();

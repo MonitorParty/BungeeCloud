@@ -9,17 +9,13 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.PrintWriter;
+import java.net.InetAddress;
 import java.net.Socket;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
-
-import com.google.common.collect.Maps;
 
 import me.lukas81298.bungeecloud.Credentials;
 import me.lukas81298.bungeecloud.InstanceType;
@@ -28,10 +24,12 @@ import me.lukas81298.bungeecloud.network.NetworkPacket;
 import me.lukas81298.bungeecloud.network.PacketDataReader;
 import me.lukas81298.bungeecloud.network.PacketDataWriter;
 import me.lukas81298.bungeecloud.network.packets.PacketAuth;
+import me.lukas81298.bungeecloud.network.packets.PacketInitServer;
 import me.lukas81298.bungeecloud.network.packets.PacketLoginSuccess;
-import me.lukas81298.bungeecloud.network.packets.PacketServerStatus;
 import me.lukas81298.bungeecloud.network.packets.PacketSetServerOffline;
 import me.lukas81298.bungeecloud.network.packets.PacketStartServer;
+
+import com.google.common.collect.Maps;
 
 public class HostInstance extends Thread {
 
@@ -170,19 +168,19 @@ public class HostInstance extends Thread {
 		String string = properties.getProperty("server-directory").replace("/", "\\");
 		File directory = new File(string + "\\" +  gamemode);
 		List<String> commands = new LinkedList<>();
-		commands.add(System.getProperty("java.home"));
-		commands.add("\\bin\\java");
+		int port = portCounter++;
+		commands.add(System.getProperty("java.home") + "\\bin\\java");
 		commands.add("-Xmx" + memory + "M");
 		commands.add("-Xms" + memory + "M");
 		commands.add("-jar");
 		commands.add(string + "\\" + gamemode + "\\spigot-1.8.7.jar");
-		fillSettings(slots, commands);
+		fillSettings(slots, commands, port);
 		ProcessBuilder pb = new ProcessBuilder(commands);
 		pb.environment().put("server-uuid", uuid.toString());
 		pb.directory(directory);
 		try {
 		    Process process = pb.start();
-		    sendPacket(new PacketServerStatus(uuid, 0, 0));
+		    sendPacket(new PacketInitServer(uuid, port, InetAddress.getLocalHost().getHostAddress(), gamemode));
 		    Server server = new Server(uuid, process, memory, slots, gamemode);
 		    servers.put(uuid, server);
 		    process.waitFor();
@@ -221,9 +219,9 @@ public class HostInstance extends Thread {
 						 // to the stream
     }
 
-    private void fillSettings(final int slots, List<String> commands) {
+    private void fillSettings(final int slots, List<String> commands, int port) {
 	commands.add("-p");
-	commands.add(Integer.toString(portCounter++));
+	commands.add(Integer.toString(port));
 	commands.add("-s");
 	commands.add(Integer.toString(slots));
 	commands.add("-o");

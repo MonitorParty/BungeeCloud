@@ -1,0 +1,4 @@
+name: bungeecloud-spigot
+version: 1.0-SNAPSHOT
+author: lukas81298
+main: me.lukas81298.bungeecloud.spigot.SpigotCloud

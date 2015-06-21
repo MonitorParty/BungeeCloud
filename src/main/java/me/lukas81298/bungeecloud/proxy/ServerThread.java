@@ -43,9 +43,10 @@ public class ServerThread extends Thread {
 		    System.out.println(socket.getRemoteSocketAddress() + " has connected. Waiting for authentication!");
 		    Client client = new Client(socket, this);
 		    client.start();
+		    clients.add(client);
 		}else {
 		    socket.close();
-		    System.out.println("Disconnected " + socket.getRemoteSocketAddress() + ", because it is not whitelisted.");
+		    System.out.println("Disconnected " + socket.getRemoteSocketAddress() + ", because not whitelisted.");
 		}
 	    }
 	} catch (Exception ex) {

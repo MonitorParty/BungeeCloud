@@ -9,14 +9,21 @@ import java.net.ServerSocket;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Scanner;
+import java.util.UUID;
 
 import me.lukas81298.bungeecloud.Credentials;
 import me.lukas81298.bungeecloud.Instance;
 import me.lukas81298.bungeecloud.InstanceType;
+import me.lukas81298.bungeecloud.UUIDCounter;
+import me.lukas81298.bungeecloud.network.packets.PacketStartServer;
 import net.md_5.bungee.BungeeCord;
+import net.md_5.bungee.api.connection.ProxiedPlayer;
 import net.md_5.bungee.api.plugin.Plugin;
+
+import com.google.common.collect.Maps;
 
 public class BungeeCloud extends Plugin implements Instance {
 
@@ -27,6 +34,8 @@ public class BungeeCloud extends Plugin implements Instance {
     private List<String> ipwhitelist = new ArrayList<>();
     private ServerSocket serverSocket;
     private ServerThread serverThread;
+    public static BungeeCloud instance;
+    public Map<ProxiedPlayer, UUID> waitingForServer = Maps.newConcurrentMap();
     
     @Override
     public void onDisable() {
@@ -36,6 +45,7 @@ public class BungeeCloud extends Plugin implements Instance {
     @Override
     public void onEnable() {
 	super.onEnable();
+	instance = this;
 	log("Loading credentials...");
 	try {
 	    loadCredentials();
@@ -51,6 +61,7 @@ public class BungeeCloud extends Plugin implements Instance {
 	} catch (IOException e) {
 	    e.printStackTrace();
 	}
+	this.getProxy().getPluginManager().registerCommand(this, new StartServerCommand());
     }
 
     private void startServer(int port) throws IOException {
@@ -164,6 +175,29 @@ public class BungeeCloud extends Plugin implements Instance {
     
     public ServerThread getServerThread() {
 	return this.serverThread;
+    }
+
+    public Client getAvailableHostSystem() {
+	for(Client client : this.serverThread.getClients()) {
+	    if(client.getInstanceType() != null) {
+		if(client.getInstanceType() == InstanceType.HOST) {
+		    return client;
+		}
+	    }
+	}
+	return null;
+    }
+    
+    public UUID startNewServer(ServerProperties prop) throws IOException {
+	UUID uuid = UUIDCounter.nextUUID();
+	PacketStartServer server = new PacketStartServer(prop.getGamemode(), prop.getSlots(), prop.getMemory(), uuid);
+	server.properties.putAll(prop.getProperties());
+	Client host = getAvailableHostSystem();
+	if(host == null) {
+	    throw new IllegalStateException("No host system is currently available.");
+	}
+	host.sendPacket(server);
+	return uuid;
     }
     
 }

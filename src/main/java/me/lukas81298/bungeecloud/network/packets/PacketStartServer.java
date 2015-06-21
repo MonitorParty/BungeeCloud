@@ -1,11 +1,15 @@
 package me.lukas81298.bungeecloud.network.packets;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.UUID;
 
 import me.lukas81298.bungeecloud.network.NetworkPacket;
 import me.lukas81298.bungeecloud.network.PacketDataReader;
 import me.lukas81298.bungeecloud.network.PacketDataWriter;
+
 
 public class PacketStartServer implements NetworkPacket {
 
@@ -13,6 +17,7 @@ public class PacketStartServer implements NetworkPacket {
     public int slots;
     public int memory;
     public UUID uuid;
+    public Map<String, String> properties = new HashMap<>();
     
     public PacketStartServer() {
 	
@@ -32,6 +37,11 @@ public class PacketStartServer implements NetworkPacket {
 	w.writeInt(slots);
 	w.writeInt(memory);
 	w.writeUUID(uuid);
+	w.writeInt(properties.size());
+	for(Entry<String, String> entry : properties.entrySet()) {
+	    w.writeString(entry.getKey());
+	    w.writeString(entry.getValue());
+	}
     }
 
     @Override
@@ -40,6 +50,11 @@ public class PacketStartServer implements NetworkPacket {
 	slots = r.readInt();
 	memory = r.readInt();
 	uuid = r.readUUID();
+	int size = r.readInt();
+	properties.clear();
+	for(int i = 0; i < size; i++) {
+	    properties.put(r.readString(), r.readString());
+	}
     }
 
     @Override

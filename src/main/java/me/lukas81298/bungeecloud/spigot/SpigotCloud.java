@@ -134,7 +134,7 @@ public class SpigotCloud extends JavaPlugin implements me.lukas81298.bungeecloud
 	this.networkThread = new Thread(this);
 	this.networkThread.start();
 	System.out.println("Connected!");
-	this.sendPacket(new PacketAuth(InstanceType.SPIGOT, this.credentials));
+	this.sendPacket(new PacketAuth(this.credentials, this.uuid));
     }
 
     public synchronized void sendPacket(NetworkPacket packet) throws IOException {
@@ -197,7 +197,7 @@ public class SpigotCloud extends JavaPlugin implements me.lukas81298.bungeecloud
 		}
 		switch(packetId) {
 		case 0x01:
-		    this.sendPacket(new PacketServerStatus(uuid,1,0));
+		    this.sendPacket(new PacketServerStatus(uuid,1,0, ""));
 		    break;
 		case 0x06:
 		    PacketConsoleCommand p = (PacketConsoleCommand) packet;
@@ -243,7 +243,7 @@ public class SpigotCloud extends JavaPlugin implements me.lukas81298.bungeecloud
     }
     
     public void updateServerData(int playerCount) {
-	PacketServerStatus packet = new PacketServerStatus(uuid, 1, playerCount);
+	PacketServerStatus packet = new PacketServerStatus(uuid, 1, playerCount,"");
 	try {
 	    sendPacket(packet);
 	} catch (IOException e) {

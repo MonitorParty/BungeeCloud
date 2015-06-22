@@ -13,11 +13,11 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Scanner;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import me.lukas81298.bungeecloud.Credentials;
 import me.lukas81298.bungeecloud.Instance;
 import me.lukas81298.bungeecloud.InstanceType;
-import me.lukas81298.bungeecloud.UUIDCounter;
 import me.lukas81298.bungeecloud.network.packets.PacketStartServer;
 import net.md_5.bungee.BungeeCord;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
@@ -36,6 +36,7 @@ public class BungeeCloud extends Plugin implements Instance {
     private ServerThread serverThread;
     public static BungeeCloud instance;
     public Map<ProxiedPlayer, UUID> waitingForServer = Maps.newConcurrentMap();
+    public Map<UUID, GameServer> gameServers = new ConcurrentHashMap<UUID, GameServer>();
     
     @Override
     public void onDisable() {
@@ -189,7 +190,7 @@ public class BungeeCloud extends Plugin implements Instance {
     }
     
     public UUID startNewServer(ServerProperties prop) throws IOException {
-	UUID uuid = UUIDCounter.nextUUID();
+	UUID uuid = UUID.randomUUID();
 	PacketStartServer server = new PacketStartServer(prop.getGamemode(), prop.getSlots(), prop.getMemory(), uuid);
 	server.properties.putAll(prop.getProperties());
 	Client host = getAvailableHostSystem();

@@ -18,6 +18,7 @@ public class PacketStartServer implements NetworkPacket {
     public int memory;
     public UUID uuid;
     public Map<String, String> properties = new HashMap<>();
+    public String world = "world";
     
     public PacketStartServer() {
 	
@@ -42,6 +43,7 @@ public class PacketStartServer implements NetworkPacket {
 	    w.writeString(entry.getKey());
 	    w.writeString(entry.getValue());
 	}
+	w.writeString(world);
     }
 
     @Override
@@ -55,6 +57,7 @@ public class PacketStartServer implements NetworkPacket {
 	for(int i = 0; i < size; i++) {
 	    properties.put(r.readString(), r.readString());
 	}
+	world = r.readString();
     }
 
     @Override

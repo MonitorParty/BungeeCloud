@@ -15,15 +15,18 @@ public class PacketServerStatus implements NetworkPacket {
     
     public int playerCount;
 
+    public String data;
+    
     public PacketServerStatus() {
 	
     }
     
-    public PacketServerStatus(UUID uuid, int state, int playerCount) {
+    public PacketServerStatus(UUID uuid, int state, int playerCount, String data) {
 	super();
 	this.uuid = uuid;
 	this.state = state;
 	this.playerCount = playerCount;
+	this.data = data;
     }
 
 
@@ -32,6 +35,7 @@ public class PacketServerStatus implements NetworkPacket {
 	w.writeUUID(uuid);
 	w.writeInt(state);
 	w.writeInt(playerCount);
+	w.writeString(data);
     }
 
     @Override
@@ -39,6 +43,7 @@ public class PacketServerStatus implements NetworkPacket {
 	uuid = r.readUUID();
 	state = r.readInt();
 	playerCount = r.readInt();
+	data = r.readString();
     }
 
     @Override

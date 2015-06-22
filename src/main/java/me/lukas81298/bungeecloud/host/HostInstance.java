@@ -18,14 +18,12 @@ import java.util.Properties;
 import java.util.UUID;
 
 import me.lukas81298.bungeecloud.Credentials;
-import me.lukas81298.bungeecloud.InstanceType;
 import me.lukas81298.bungeecloud.PacketRegistry;
 import me.lukas81298.bungeecloud.network.NetworkPacket;
 import me.lukas81298.bungeecloud.network.PacketDataReader;
 import me.lukas81298.bungeecloud.network.PacketDataWriter;
 import me.lukas81298.bungeecloud.network.packets.PacketAuth;
 import me.lukas81298.bungeecloud.network.packets.PacketInitServer;
-import me.lukas81298.bungeecloud.network.packets.PacketLoginSuccess;
 import me.lukas81298.bungeecloud.network.packets.PacketSetServerOffline;
 import me.lukas81298.bungeecloud.network.packets.PacketStartServer;
 
@@ -59,8 +57,14 @@ public class HostInstance extends Thread {
     public HostInstance() {
 	try {
 	    this.loadSettings();
-	    this.connect();
 	} catch (IOException e) {
+	    System.out.println("Unable to load the settings:");
+	    e.printStackTrace();	    
+	}
+	try {
+	    this.connect();
+	}catch(IOException e) {
+	    System.out.println("Could not connect:");
 	    e.printStackTrace();
 	}
     }
@@ -98,17 +102,21 @@ public class HostInstance extends Thread {
 	}
 	this.credentials = Credentials.readFromInputStream(new FileInputStream(file), 1024);
 	if (this.configFile.exists()) {
+	    System.out.print("Loading setting ");
 	    this.properties.load(new FileInputStream(this.configFile));
+	    System.out.println(" done.");
 	} else {
+	    System.out.println("No configuration file was found. Creating one...");
 	    this.properties.setProperty("host", "127.0.0.1");
 	    this.properties.setProperty("port", "22567");
 	    this.properties.setProperty("server-directory", "D:\\Projects\\BungeeCloud\\spigot-server\\");
 	    this.configFile.createNewFile();
-	    this.properties.store(new FileOutputStream(this.configFile), "Config File. This file can be edited!");
+	    this.properties.store(new FileOutputStream(this.configFile), "");
 	}
     }
 
     public void connect() throws IOException {
+	System.out.println("Starting BungeeCloud Host Instance...");
 	String property = this.properties.getProperty("host", "127.0.0.1");
 	int port = Integer.parseInt(this.properties.getProperty("port"));
 	System.out.println("Connecting to " + property + ":" + port);
@@ -116,8 +124,8 @@ public class HostInstance extends Thread {
 	this.input = new DataInputStream(this.socket.getInputStream());
 	this.output = new DataOutputStream(this.socket.getOutputStream());
 	this.start();
-	System.out.println("Connected!");
-	this.sendPacket(new PacketAuth(InstanceType.HOST, this.credentials));
+	System.out.println("Connected to the server. Waiting for start requests.");
+	this.sendPacket(new PacketAuth(this.credentials));
     }
 
     @Override
@@ -139,16 +147,14 @@ public class HostInstance extends Thread {
 		    System.out.println("[BungeeCloud] Invalid packet id " + packetId);
 		    continue;
 		}
-		if (packet.getPacketId() == 0x00) {
-		    throw new IllegalStateException("Wrong packet direction");
-		}
 		if (packet.getPacketId() == 0x01) {
-		    PacketLoginSuccess p = (PacketLoginSuccess) packet;
-		    System.out.println("Authentification success: " + (System.currentTimeMillis() - p.systemTime) + "ms");
+		    System.out.println("---------------------------");
+		    System.out.println("Successfully authenticated.");
+		    System.out.println("---------------------------");
 		}
-		if (packet.getPacketId() == 0x02) {
+		else if (packet.getPacketId() == 0x02) {
 		    PacketStartServer s = (PacketStartServer) packet;
-		    System.out.println("Starting server " + s.uuid + " with " + s.slots + " slots, " + s.memory + "Mib memory and gamemode " + s.gamemode);
+		    System.out.println("[BungeeCloud] Starting server " + s.uuid + " with " + s.slots + " slots, " + s.memory + "Mib memory and gamemode " + s.gamemode);
 		    this.startServer(s.uuid, s.gamemode, s.slots, s.memory);
 		}
 	    }
@@ -188,6 +194,7 @@ public class HostInstance extends Thread {
 		    sendPacket(packet);
 		    System.out.println("Server " + uuid + " went offline.");
 		} catch (IOException e) {
+		    System.out.println("Error while starting the server.");
 		    e.printStackTrace();
 		} catch (InterruptedException e) {
 		    e.printStackTrace();

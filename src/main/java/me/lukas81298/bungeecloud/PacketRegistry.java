@@ -8,6 +8,7 @@ import me.lukas81298.bungeecloud.network.packets.PacketAuth;
 import me.lukas81298.bungeecloud.network.packets.PacketConsoleCommand;
 import me.lukas81298.bungeecloud.network.packets.PacketInitServer;
 import me.lukas81298.bungeecloud.network.packets.PacketLoginSuccess;
+import me.lukas81298.bungeecloud.network.packets.PacketCustomData;
 import me.lukas81298.bungeecloud.network.packets.PacketServerStatus;
 import me.lukas81298.bungeecloud.network.packets.PacketSetServerOffline;
 import me.lukas81298.bungeecloud.network.packets.PacketStartServer;
@@ -26,6 +27,7 @@ public class PacketRegistry {
 	this.registerPacket(0x04, PacketSetServerOffline.class);
 	this.registerPacket(0x05, PacketInitServer.class);
 	this.registerPacket(0x06, PacketConsoleCommand.class);
+	this.registerPacket(0x07, PacketCustomData.class);
     }
     
     public void registerPacket(int packetId, Class<? extends NetworkPacket> clazz) {
